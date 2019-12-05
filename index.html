@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <style>
+        .title{
+            display: inline-block;
+            width: 100px;
+        }
+        div{
+            line-height: 20px;
+        }
+        .tips{
+            color: #999;
+        }
+        #WX input[type='text'],#eLife input[type='text']{
+            width: 85%;
+        }
+    </style>
+</head>
+<body>
+        <div>
+            <span class="title">环境选择:</span>
+            <label><input type="radio" name="enviroment" value="development" checked />功能环境</label>
+            <label><input type="radio" name="enviroment" value="product" />生产环境</label>
+        </div>
+        <div>
+            <span class="title">授权选择:</span>
+            <label><input type="radio" name="version" value="health" checked />health</label>
+            <label><input type="radio" name="version" value="health2" />health2</label>
+            <span class="tips">(对应smart/smart2授权)</span>
+        </div>
+        <div>
+            <span class="title">eruda监控:</span>
+            <label><input type="radio" name="eruda" value="开启" checked />开启</label>
+            <label><input type="radio" name="eruda" value="关闭" />关闭</label>
+            <span class="tips">(无需手动设置,已按照环境自动显示,除非强行关闭)</span>
+        </div>
+        <div>
+            <span class="title">corpId:</span>
+            <input type="text" name='corpId' value="1100000000" />
+        </div>
+        <div>
+            <button id="create">生成链接</button>
+        </div>
+
+        <h3>微信</h3>
+        <div style="margin-top: 20px;" id="WX"></div>
+
+        <h3>e生活</h3>
+        <div id="eLife"></div>
+</body>
+<script>
+    window.onload = function(){
+        var u = navigator.userAgent
+        if(u.indexOf("Trident") > -1){
+            alert("不支持当前浏览器，建议使用谷歌或者火狐浏览器打开")
+        }
+    }
+</script>
+<script>
+    // 复制事件
+    function copy(id){
+        const input = document.getElementById(id)
+        const text = input.value
+        input.select()
+        document.execCommand("copy")
+    }
+    
+    window.onload = function(){
+        const arrWX = [
+            { name:'预约挂号', path: '/selectHospital', id: 'selectHospitalWX' },
+            { name:'个人中心', path: '/MidLogin', id: 'selfCenterWX' },
+        ]
+        const arreLife = [
+            { name:'预约挂号', path: '/selectHospital', id: 'selectHospitalE' },
+            { name:'个人中心', path: '/MidLogin', id: 'selfCenterE' },
+            { name:'电子健康卡', path: '/qrMidLogin', id: 'qrMidLoginE' },
+            { name:'定位取号', path: '/getNoList', id: 'getNoListE' },
+            { name:'导诊图', path: '/guide', id: 'guideE' },
+        ]   
+
+
+        // 微信路径生成
+        const WX = document.getElementById("WX")
+        const divWX = document.createElement('div')
+        let htmlWX = ''
+        arrWX.forEach((o,i) => {
+            htmlWX += `<div>
+                        <span class='title'>${o.name}:</span>
+                        <button onclick="copy('${o.id}')">copy</button>
+                        <input type="text" name='WX' id="${o.id}" value="" />
+                    </div>`
+        })
+        divWX.innerHTML = htmlWX
+        WX.appendChild(divWX)
+
+        // eLife路径生成
+        const eLife = document.getElementById("eLife")
+        const diveLife = document.createElement('div')
+        let htmleLife = ''
+        arreLife.forEach((o,i) => {
+            htmleLife += `<div>
+                        <span class='title'>${o.name}:</span>
+                        <button onclick="copy('${o.id}')">copy</button>
+                        <input type="text" name='eLife' id="${o.id}" value="" />
+                    </div>`
+        })
+        diveLife.innerHTML = htmleLife
+        eLife.appendChild(diveLife)
+
+
+        // 生成路径点击事件
+        function create(){
+            let eruda = ''
+            let corpId = document.getElementsByName('corpId')[0].value
+            let enviroment = ''
+            let version = ''
+
+            const enviromentArr = document.getElementsByName('enviroment')
+            enviromentArr.forEach(o => {
+                if(o.checked){
+                    enviroment = o.value
+                }
+            })
+
+            const versionArr = document.getElementsByName('version')
+            versionArr.forEach(o => {
+                if(o.checked){
+                    version = o.value
+                }
+            })
+            
+            const erudaArr = document.getElementsByName('eruda')
+            erudaArr.forEach(o => {
+                if(o.checked){
+                    eruda = o.value === '开启' ? '' : '&eruda=false'
+                }
+            })
+
+            let domain = ''
+            let host = ''
+            const auth = version === 'health' ? 'smart' : 'smart2'
+            if(enviroment === 'product'){
+                host = 'ehealth'
+                domain = '.icbc.com.cn'
+            } else {
+                host = version === 'health' ? 'health' : 'health2'
+                domain = '.dccnet.com.cn'
+            }
+            const url = `https://${host}${domain}/m/health/hospital/eLife/?corpId=${corpId}${eruda}`
+
+            const WX = document.getElementsByName('WX')
+            const eLife = document.getElementsByName('eLife')
+            arrWX.forEach((o,i) => {
+                if(o.path != '/MidLogin'){
+                    WX[i].value = `${url}&WX=weixin#${o.path}`
+                } else {
+                    const redUrl = encodeURIComponent(`${url}&WX=weixin#${o.path}`)
+                    WX[i].value = `https://${auth}${domain}/auth/api-auth/authorize/v2?bindPhoneBefore=0&redirect_uri=${redUrl}`
+                }
+            })
+            
+            arreLife.forEach((o,i) => {
+                if(o.path != '/MidLogin'){
+                    eLife[i].value = `${url}&WX=eLife#${o.path}`
+                } else {
+                    const redUrl = encodeURIComponent(`${url}&WX=weixin#${o.path}`)
+                    eLife[i].value = `https://${auth}${domain}/auth/api-auth/authorize/v2?bindPhoneBefore=0&redirect_uri=${redUrl}`
+                }
+            })
+        }
+        create()
+
+        document.getElementById("create").onclick = () => {
+            create()
+        }
+    }
+</script>
+</html>
